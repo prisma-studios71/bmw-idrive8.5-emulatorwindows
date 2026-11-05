@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hmi8 coding & settings</title>
+<style>
+:root{color-scheme:dark;font:15px system-ui;background:#10131a;color:#e4e9f3}body{margin:24px auto;padding:0 18px;max-width:1400px}section{background:#171d29;padding:20px;border-radius:10px;margin:16px 0}.columns{display:grid;grid-template-columns:1fr 1fr;gap:18px}.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}button,input,textarea,select,a{font:inherit;color:inherit;background:#202838;border:1px solid #40516e;border-radius:5px;padding:8px}button,a{cursor:pointer}textarea{box-sizing:border-box;width:100%;min-height:230px;font:13px ui-monospace,monospace}.muted{color:#9da9bf}#message{color:#f3c982;position:sticky;top:0;background:#10131a;padding:12px}#definitions{max-height:650px;overflow:auto}details{margin:12px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere}@media(max-width:850px){.columns{grid-template-columns:1fr}}
+</style>
+<h1>Coding & settings</h1><p class="row"><a id="viewer" target="_blank" rel="noopener">Open viewer ↗</a><a href="/mocks">Climate & music mocks</a><button id="restart">Restart HMI container</button><button id="save-restart">Save coding & restart</button></p>
+<p class="muted">Restart controls restart this container via Compose, not the Docker engine. No Docker socket is mounted. Firmware startup may take 90 seconds.</p>
+<p id="message" role="status">Connecting…</p>
+<section aria-labelledby="update-heading"><h2 id="update-heading">Software updates</h2>
+<p id="installed-version">Reading installed version…</p><p class="muted">Installed commit: <code id="installed-commit">unknown</code></p>
+<p id="update-message" role="status">Not checked.</p><p id="update-release" class="muted"></p>
+<p class="row"><button id="check-updates">Check for updates</button><a id="update-website" target="_blank" rel="noopener noreferrer" hidden>Open project on GitHub ↗</a><a id="update-releases" target="_blank" rel="noopener noreferrer" hidden>Release downloads ↗</a></p>
+<p class="muted">Checks contact GitHub only when requested and are cached for five minutes. Nothing is downloaded or installed automatically. This updates the emulator, not BMW firmware.</p>
+<details><summary>How to install an update</summary><p>In Terminal, open your emulator project folder and run:</p><pre>bash update.sh</pre><p class="muted">This pulls your tracked branch (fast-forward only), copies the source into Lima, and restarts your current vehicle profile. Local changes or a detached release tag require manual review. Coding, presets, mocks and imported BMW files are kept. For a ZIP download, get the new project files and run its install.sh against your existing VM.</p></details></section>
+<div class="columns"><div>
+<section><h2>Active coding</h2><p class="muted">Validated fakecod overrides; not coding a vehicle. Save alone does not change the running HMI.</p><textarea id="coding" aria-label="Coding JSON" spellcheck="false"></textarea><p class="row"><button id="save">Validate & save</button><button id="reload">Reload active</button><button id="export">Download JSON</button></p></section>
+<section><h2>Presets</h2><p class="row"><select id="presets" aria-label="Preset"></select><button id="load">Load into editor</button><button id="activate">Activate & save</button></p><p class="row"><input id="name" placeholder="my-preset" aria-label="New preset name"><button id="store">Save editor as preset</button><button id="delete">Delete selected</button></p><p class="muted">Built-ins are read-only. G80 BMW is experimental and needs separately supplied G80 assets; selecting coding does not install missing M-brand assets.</p></section>
+<section><h2>CAFD → preset converter</h2><p class="muted">Paste a JSON name/value object, {"overrides":{…}}, or {"entries":[{"uuid":"0x…","value":1}]}. Explicit values are converted through your firmware dictionary; numeric enums become labels. Raw binary CAFD/NCD decoding and donor defaults are not supported.</p><textarea id="source" aria-label="CAFD JSON source" spellcheck="false">{"DEVELOPER_MENU":"enabled"}</textarea><p class="row"><input type="file" id="import" accept=".json,application/json" aria-label="Import coding JSON"><button id="convert">Convert into editor</button></p></section>
+</div><section><h2>CAFD dictionary & entry builder</h2><p class="muted">Read from private firmware. Only verified meanings are described. Choose a value and add it to the editor; values are never inferred from metadata.</p><p class="row"><input id="search" placeholder="e.g. SERIES" aria-label="Search CAFD"><button id="find">Search</button></p><div id="definitions"></div></section></div>
+<script>
+const message=document.querySelector('#message'),coding=document.querySelector('#coding');let available={};
+document.querySelector('#viewer').href=location.protocol+'//'+location.hostname+':'+(location.port?Number(location.port)-1:5011)+'/';
+async function request(path,body){const response=await fetch(path,body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json','X-Hmi8-Request':'1'},body:JSON.stringify(body)});const result=await response.json();if(!response.ok)throw Error(result.error||response.status);return result;}
+function action(selector,callback){document.querySelector(selector).onclick=async()=>{try{await callback();}catch(error){message.textContent=error.message;}};}
+function showUpdate(result){
+    const installed=result.installed;
+    document.querySelector('#installed-version').textContent='Installed: '+(installed.version||installed.tag||'Unversioned folder')+' · '+(installed.branch?'branch '+installed.branch:installed.source==='git'?'detached tag/commit':'no Git history')+(installed.dirty===true?' · includes local changes':installed.dirty===null?' · local changes unknown':'');
+    document.querySelector('#installed-commit').textContent=installed.commit||'not recorded (folder/ZIP installation)';
+    document.querySelector('#update-message').textContent=result.message+(result.checked_at?' Checked '+new Date(result.checked_at).toLocaleString()+'.':'');
+    document.querySelector('#update-release').textContent=result.latest_release?'Latest published release: '+result.latest_release.tag:'';
+    const website=document.querySelector('#update-website'),releases=document.querySelector('#update-releases');
+    website.hidden=!result.update_url;website.href=result.update_url||'';
+    website.textContent=result.status==='available'?'View available update on GitHub ↗':'Open project / branch on GitHub ↗';
+    releases.hidden=!result.releases_url;releases.href=result.releases_url||'';
+}
+document.querySelector('#check-updates').onclick=async()=>{
+    const button=document.querySelector('#check-updates');button.disabled=true;
+    document.querySelector('#update-message').textContent='Checking GitHub…';
+    try{showUpdate(await request('/api/updates',{}));}
+    catch(error){document.querySelector('#update-message').textContent='Could not check for updates: '+error.message;}
+    finally{button.disabled=false;}
+};
+request('/api/updates').then(showUpdate).catch(error=>document.querySelector('#update-message').textContent='Version information unavailable: '+error.message);
+async function reload(){coding.value=JSON.stringify((await request('/api/coding')).overrides,null,2);message.textContent='Loaded saved coding. Restart to apply saved changes.';}
+async function presets(){available=(await request('/api/presets')).presets;const select=document.querySelector('#presets');select.replaceChildren();for(const name of Object.keys(available)){const option=document.createElement('option');option.value=name;option.textContent=name;select.append(option);}}
+async function save(){await request('/api/coding',JSON.parse(coding.value));message.textContent='Saved and validated. Restart to apply.';}
+async function restart(){if(!confirm('Restart this HMI container? The viewer will disconnect during startup.'))return;const before=await request('/api/status');await request('/api/restart',{});message.textContent='Restart requested; waiting for the new container process…';const deadline=Date.now()+180000;while(Date.now()<deadline){await new Promise(resolve=>setTimeout(resolve,2000));try{const result=await request('/api/status');if(result.session!==before.session&&result.ready){message.textContent='Container restarted; renderer is ready.';return;}}catch{}}message.textContent='Restart is still pending. Check docker compose ps/logs; restart policy must be enabled.';}
+action('#reload',reload);action('#save',save);action('#restart',restart);action('#save-restart',async()=>{await save();await restart();});
+action('#load',()=>{coding.value=JSON.stringify(available[document.querySelector('#presets').value],null,2);message.textContent='Preset loaded into editor; not activated.';});
+action('#activate',async()=>{await request('/api/presets',{action:'activate',name:document.querySelector('#presets').value});await reload();});
+action('#store',async()=>{await request('/api/presets',{action:'save',name:document.querySelector('#name').value,overrides:JSON.parse(coding.value)});await presets();message.textContent='Preset saved to the private volume.';});
+action('#delete',async()=>{const name=document.querySelector('#presets').value;if(!confirm('Delete preset '+name+'?'))return;await request('/api/presets',{action:'delete',name});await presets();message.textContent='Preset deleted.';});
+action('#convert',async()=>{const result=await request('/api/convert',JSON.parse(document.querySelector('#source').value));coding.value=JSON.stringify(result.overrides,null,2);message.textContent='Converted into editor (not saved). '+result.note;});
+document.querySelector('#import').onchange=async event=>{try{const file=event.target.files[0];if(!file)return;if(file.size>65536)throw Error('JSON import limit: 64 KiB');document.querySelector('#source').value=await file.text();}catch(error){message.textContent=error.message;}};
+action('#export',()=>{const data=JSON.stringify(JSON.parse(coding.value),null,2);const url=URL.createObjectURL(new Blob([data],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='hmi8-coding.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+let dictionaryGeneration=0,dictionaryOffset=null,dictionaryLoading=false,dictionarySearch='',dictionaryCount=0;
+const dictionaryObserver=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting))loadDictionaryPage();},{root:document.querySelector('#definitions'),rootMargin:'200px'});
+function appendDefinitions(features){for(const[name,feature]of Object.entries(features)){const item=document.createElement('details'),title=document.createElement('summary'),text=document.createElement('pre'),button=document.createElement('button');title.textContent=name;text.textContent=feature.meaning+'\nID: '+feature.uuid+'\n'+JSON.stringify({values:feature.values,minimum:feature.minimum,maximum:feature.maximum,unit:feature.unit},null,2);const values=Object.keys(feature.values);const input=document.createElement(values.length?'select':'input');input.setAttribute('aria-label',name+' value');if(values.length){for(const value of values){const option=document.createElement('option');option.value=value;option.textContent=value+' = '+feature.values[value];input.append(option);}}else{input.type='number';input.step='1';input.placeholder='Explicit integer value';}button.textContent='Add to coding editor';button.onclick=async()=>{try{if(!values.length&&input.value==='')throw Error('Enter an explicit value');const result=await request('/api/convert',{[name]:values.length?input.value:Number(input.value)});coding.value=JSON.stringify({...JSON.parse(coding.value),...result.overrides},null,2);message.textContent=name+' added to editor (not saved).';}catch(error){message.textContent=error.message;}};item.append(title,text,input,button);document.querySelector('#dictionary-more').before(item);}}
+async function loadDictionaryPage(){
+    if(dictionaryLoading||dictionaryOffset===null)return;
+    dictionaryLoading=true;
+    const generation=dictionaryGeneration,offset=dictionaryOffset;
+    const more=document.querySelector('#dictionary-more');
+    more.textContent='Loading more entries…';
+    try{
+        const result=await request('/api/cafd?search='+encodeURIComponent(dictionarySearch)+'&offset='+offset+'&limit=100');
+        if(generation!==dictionaryGeneration)return;
+        appendDefinitions(result.features);
+        dictionaryCount+=Object.keys(result.features).length;
+        dictionaryOffset=result.next_offset;
+        document.querySelector('#dictionary-count').textContent=dictionaryCount+' of '+result.total+' matching entries loaded'+(dictionaryOffset===null?'':' — scroll for more');
+        more.textContent=dictionaryOffset===null?'All matching entries loaded.':'Load more entries';
+        more.disabled=dictionaryOffset===null;
+        dictionaryObserver.disconnect();
+        if(dictionaryOffset!==null)dictionaryObserver.observe(more);
+    }catch(error){if(generation===dictionaryGeneration){message.textContent=error.message;more.textContent='Retry loading entries';}}
+    finally{if(generation===dictionaryGeneration)dictionaryLoading=false;}
+}
+async function definitions(){
+    dictionaryGeneration++;dictionaryOffset=0;dictionaryLoading=false;dictionaryCount=0;
+    dictionarySearch=document.querySelector('#search').value;
+    dictionaryObserver.disconnect();
+    const parent=document.querySelector('#definitions'),count=document.createElement('p'),more=document.createElement('button');
+    count.id='dictionary-count';more.id='dictionary-more';more.textContent='Load entries';more.onclick=loadDictionaryPage;
+    parent.replaceChildren(count,more);parent.scrollTop=0;
+    await loadDictionaryPage();
+}
+action('#find',definitions);document.querySelector('#search').onkeydown=event=>{if(event.key==='Enter')document.querySelector('#find').click();};
+Promise.all([reload(),presets(),definitions()]).catch(error=>message.textContent=error.message);
+</script></html>

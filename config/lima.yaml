@@ -1,0 +1,20 @@
+minimumLimaVersion: 2.1.4
+vmType: krunkit
+arch: aarch64
+cpus: 6
+memory: 4GiB
+disk: 20GiB
+images:
+  - location: https://download.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/aarch64/images/Fedora-Cloud-Base-Generic-44-1.7.aarch64.qcow2
+    arch: aarch64
+    digest: sha256:55c60a3b80d3616a08705afd0459e75fe9f03c54aba7a46e4002a41a72fa0d5b
+mounts: []
+containerd:
+  system: false
+  user: false
+ssh:
+  forwardAgent: false
+  overVsock: false
+portForwards:
+  - guestPortRange: [1, 65535]
+    ignore: true

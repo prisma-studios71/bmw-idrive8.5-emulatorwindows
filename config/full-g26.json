@@ -1,0 +1,10 @@
+{
+  "SERIES": "G026BEV",
+  "HMI_BRAND": "bmw",
+  "TYPE_OF_FUEL": "electro",
+  "TYPE_OF_CONSTRUCTION": "limousine",
+  "NAVI_VARIANT": "ece",
+  "DEVELOPER_MENU": "enabled",
+  "SPORT_DISPLAYS": "id8_layout",
+  "DISTANCE_UNIT": "km_only"
+}

@@ -1,0 +1,35 @@
+{
+  "host": {
+    "libvirglrenderer.1.dylib": "5075fb84009e7e1adeaa12d8e84a819814b33b11ba617244229cd73fc5b01d77",
+    "libvulkan_kosmickrisp.dylib": "40bdce0ac05adc975bf6710742258c61fbf550ea4dacc7c6a802732942b2408c"
+  },
+  "driver": {
+    "angle/libEGL.so": "947e9e8f35bec089641d1ead688b74a0ae9044087eb81220f4d5e51bbfbf463d",
+    "angle/libGLESv2.so": "c7c18982e329b3152e84b94e13df29504c65f9a0f6b1f6b2e48e0630838ffa57",
+    "angle/libegl-wayland-shim.so": "ac689e3e929eebee6330b8875a17aced6987575f5961ced4e6c1467f5288311a",
+    "angle/libvulkan.so.1": "f17906d32bbe49306f1406caf441f9862cdb7090320d5f0a40daebc9173e1be5",
+    "libdisplay-info.so.3": "f612631f8c0d7506d469d28218456b9f98488649d2d956fc2e22ce1759210ac7",
+    "libvulkan_virtio.so": "c24670e89667cdc4a0e4bfec70ffde48dc8c3869692854da31159d17ddf893ed",
+    "libwayland-client.so.0": "e895b3cd77db90bae719259e9ed40f1d00e34e3cee3143dc2190ef85cced5fad",
+    "libxcb-dri3.so.0": "35e4cca423ac90a738dc3e20eabff86f03089d6b8071d7a32c76c40fc442dac1",
+    "libxcb-present.so.0": "31ecbffc1772d8918b3077deeda4726e271bc21999fa9f803d1e4fab545bdfd0",
+    "venus.json": "b8ec6768158a08a7ec7a8386160bf97dc1637dc8dfd0ddd74672c1a4da71587b"
+  },
+  "sources": {
+    "host_mesa": "https://github.com/chaotic-cx/mesa-mirror/tree/81d869ccd506ed4edf371bfaba700dc01e54723b",
+    "host_virglrenderer": "https://gitlab.freedesktop.org/slp/virglrenderer/-/tree/0.10.4e-krunkit",
+    "host_build_and_patch": "tools/build_host_gpu.sh",
+    "angle": "Chromium 143.0.7499.4, ANGLE e5930c3b265b324c465561fc123d8018138dbc9f",
+    "angle_binary_distribution": "Playwright Chromium revision 1200, chromium-linux-arm64.zip",
+    "angle_distribution_sha256": "e73eeb680312e96d4f8fbca589ad42e3fb719178b4bdd8707f9fe796123bf48b",
+    "chromium_credits_sha256": "8bdd46a3b7a6d59221c879ebb29f9e30dbe65439a7b92966402e8d375a2c1a06",
+    "angle_manifest": "https://github.com/microsoft/playwright/blob/v1.57.0/packages/playwright-core/browsers.json",
+    "guest_mesa": "mesa-vulkan-drivers-25.3.6-102.fc44.aarch64, Fedora Copr slp/mesa-libkrun-vulkan",
+    "guest_mesa_repository": "https://copr.fedorainfracloud.org/coprs/slp/mesa-libkrun-vulkan/",
+    "wayland": "libwayland-client-1.26.0-1.fc44.aarch64, Fedora Project",
+    "xcb": "libxcb-1.17.0-7.fc44.aarch64, Fedora Project",
+    "display_info": "libdisplay-info-0.3.0-1.fc44.aarch64, Fedora Project",
+    "vulkan_loader": "vulkan-loader-1.4.341.0-1.fc44.aarch64, Fedora Project",
+    "wayland_shim": "runtime/egl_wayland_shim.c"
+  }
+}

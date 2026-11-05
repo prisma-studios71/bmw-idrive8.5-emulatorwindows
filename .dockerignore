@@ -1,0 +1,14 @@
+**
+!Dockerfile
+!LICENSE
+!NOTICE
+!runtime/
+!runtime/**
+!container/
+!container/**
+!web/
+!web/**
+!config/
+!config/*.json
+**/__pycache__/
+**/*.pyc

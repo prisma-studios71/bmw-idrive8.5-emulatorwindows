@@ -1,0 +1,15 @@
+The MIT license in LICENSE applies to the original emulator wrapper code and
+original project documentation. It does not relicense third-party material.
+
+The vendored ivi-controller protocol retains its own copyright and license
+notice. Dependencies and separately distributed graphics/tooling binaries
+retain their respective licenses; see docs/THIRD_PARTY.md.
+
+BMW firmware, extracted assets, maps, CAFD/NCD data, UI artwork shown in
+screenshots, trademarks, and third-party package-name catalogs are not
+licensed under this project's MIT license. No redistribution permission for
+those materials is granted by this project, including for materials linked
+from its documentation. Supply only files you are entitled to use.
+
+This project is unofficial and is not endorsed by BMW, Harman, Qualcomm,
+or the authors of its third-party dependencies.

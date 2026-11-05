@@ -1,0 +1,16 @@
+{
+  "release_url": "https://github.com/rishik250809/bmw-idrive8.5-emulator/releases/download/v0.1.0",
+  "note": "Open-source runtime pieces only (no BMW software). Verified by SHA-256 before use.",
+  "assets": {
+    "host-runtime.tar.gz": {
+      "sha256": "0796d8b86b01bf7375b983c5e01c1cc9ba217119fa29f2074feebdcdb6bd8220",
+      "bytes": 2962859,
+      "contents": "Mac GPU driver: KosmicKrisp (Mesa, MIT) + virglrenderer (MIT)"
+    },
+    "driver.tar.gz": {
+      "sha256": "1ac0e0096eb7d91cab7aade40c6202ed074c9a219625343c7115b3cb294dfc5f",
+      "bytes": 5942424,
+      "contents": "VM graphics libraries: ANGLE (BSD), Mesa Venus (MIT), Vulkan loader (Apache-2.0), Wayland/xcb (MIT)"
+    }
+  }
+}
