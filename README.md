@@ -3,17 +3,15 @@
 ## WARNING: It will only work on a Mac with M Chips, macOS 26+.
 
 
-### A standalone Idrive8.5 Emulator which runs on ARM linux based VM locally on a Mac. No connection to anything else.
+### A standalone IDrive8.5 Emulator which runs on ARM linux based VM locally on a Mac. No connection to anything else.
 ### Featuring a G80 M3 and a i4 G26 emulator preset.
 
 
-
-
 ### Main Viewer (http://127.0.0.1:5011):
-![cover.png](cover.png)
+![cover.png](img/cover.png)
 
 ### Setting/Coding Page (http://127.0.0.1:5012):
-![cover2.png](cover2.png)
+![cover2.png](img/cover2.png)
 
 #### Output will show on a website, use the mouse to control the Emulator.
 
@@ -24,8 +22,7 @@ Mac → Lima/Krunkit Fedora VM → privileged ARM64 Docker container → firmwar
 Docker alone cannot replace the VM's host-GPU bridge.  The bundle contains a tooling-only
 Docker image, not a VM image disguised as a Docker image.
 
-There are no Mac directory mounts in the VM configuration. Setup copies the original MGU22 firmware files
-into the new VM. Docker bind mounts guest directories:
+Setup copies the original MGU22 firmware files into the new VM. Docker bind mounts guest directories:
 
 - `/srv/bmw-idrive85/state` → `/srv/hmi8-lab`: private extracted runtime and state.
 - `/srv/bmw-idrive85/driver` → `/opt/venus`: guest driver libraries, read-only.
@@ -63,11 +60,9 @@ swfk_0000AED4 --> G80 M3 graphics
   It uses the Metal 4 API, which has been introduced in macOS 26.
 - Tested on a M1 Pro, macOS 26.7.1, Lima 2.1.4, Krunkit 1.3.2. 
 - At least 4 GiB available guest RAM recommended, 16 GiB total host RAM recommended.
-- At least 25 GiB of free disk space before installation (enforced by the installer). Keep additional space for your BMW source files or extracted backup; navigation maps are not included in this requirement.
-- Homebrew in `/opt/homebrew`, Python 3.11+, SSH and Xcode command-line tools.
-- Homebrew Lima, Krunkit, Vulkan loader, libepoxy and SPIR-V Tools. The supplied
-  host dylibs reference `/opt/homebrew/opt/...`; `doctor.sh` checks these paths.
-- Network access on first setup for Fedora and Linux Docker packages.
+- At least 25 GiB of free disk space before installation (enforced by the installer).
+- Homebrew, Python 3.11+, SSH
+- Network access
 
 Install missing prerequisites yourself, after reviewing their upstream sources:
 
@@ -130,7 +125,7 @@ directory without backing up coding and mock values. To update UI/source
 without reimporting firmware, use `bash scripts/sync_source.sh`, then restart
 the selected profile.
 
-## Presets given in the Drive folder
+## Presets given
 
 - `barestock`: only developer menu, sport displays and km units coded; everything else
   uses the firmware defaults (G26 BEV, BMW).
@@ -146,23 +141,14 @@ Each series/brand combination keeps its own
 saved HMI state, created on first use.
 Use `start.sh` to switch complete profiles and preserve outgoing coding.
 
-Mock features are display-state simulations, not actual Bluetooth/audio/HVAC.
+Mock features are display-state simulations, not actual Bluetooth/audio/HVAC (for now).
 Navigation, AR camera, ConnectedDrive and other full vehicle services are not provided (for now).
 
-If you want one more model to be added, hit me up a request in **Issue**,
-or ask claude to do that.
-
-**If you want to use AI to add another car model(if you have psdzdata full):**
-
-You have [swe_names_all.tsv](swe_names_all.tsv) located in this project to show you, which files you need for which model if you have the psdzdata full. 
-Please use the LCI Chassis files, as the non-lci Chassis files are presumably meant for IDrive7/Idrive8, which will **NOT** work.
-
-Give these files to claude or your other preferred AI and let him disassemble the bin file, implement the appropiate codings and data files to let the VM boot to the correct preset.
-
+If you want one more model to be added, hit me up a request in **Issue**.
 
 ```sh
 limactl shell --workdir=/srv/bmw-idrive85/source bmw-idrive85 -- sudo docker build -t bmw-idrive85-tools:local .
 BMW_TOOLS_IMAGE=bmw-idrive85-tools:local bash start.sh g80-m
 ```
 
-### Credits go to BMW AG, BMW Car IT GmbH, DENSO Corporation and other Companies. This is a research experiment, it is not meant for redistribution, at all.
+### Credits go to BMW AG, BMW Car IT GmbH, DENSO Corporation, Snapdragon and other Companies. This is a research experiment, it is not meant for redistribution, at all.
