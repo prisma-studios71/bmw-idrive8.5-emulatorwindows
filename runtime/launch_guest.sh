@@ -185,6 +185,9 @@ launcher=(/opt/ivi/rootfs/usr/bin/Hmi8)
 activation=()
 extra_environment=()
 if [[ "$mode" == mesa* ]]; then
+    mkdir -p "$root/opt/lab-compat"
+    mount --bind /srv/hmi8-lab/compat "$root/opt/lab-compat"
+    mount -o remount,bind,ro "$root/opt/lab-compat"
     mkdir -p "$root/opt/lab-ubuntu/lib" "$root/opt/lab-ubuntu/glvnd" "$root/opt/lab-overrides"
     mount --bind /usr/lib/aarch64-linux-gnu "$root/opt/lab-ubuntu/lib"
     mount --bind /usr/share/glvnd "$root/opt/lab-ubuntu/glvnd"
@@ -192,8 +195,9 @@ if [[ "$mode" == mesa* ]]; then
     library_path="/opt/venus/angle:/opt/venus:/opt/lab-overrides:/opt/lab-ubuntu/lib:$library_path"
     launcher=(/opt/lab-ubuntu/lib/ld-linux-aarch64.so.1 --library-path "$library_path" /opt/ivi/rootfs/usr/bin/Hmi8)
     extra_environment=(XDG_SESSION_TYPE=wayland ANGLE_DEFAULT_PLATFORM=vulkan ANGLE_FEATURE_OVERRIDES_DISABLED=supportsIncrementalPresent VK_DRIVER_FILES=/opt/venus/venus.json LIBGL_DRIVERS_PATH=/opt/lab-ubuntu/lib/dri __EGL_VENDOR_LIBRARY_FILENAMES=/opt/lab-ubuntu/glvnd/egl_vendor.d/50_mesa.json GCONV_PATH=/opt/lab-ubuntu/lib/gconv)
+    extra_environment+=(LD_PRELOAD=/opt/lab-compat/libhmi-bti-compat.so)
     if [[ "$mode" == mesa-g26 ]]; then
-        extra_environment+=(ECU=mgu_02_a LD_PRELOAD=/usr/lib/libfakecod.so.0:/opt/venus/libvulkan_virtio.so:/opt/venus/angle/libegl-wayland-shim.so LOAD_DEFAULTS=1 "FLAGS_CONFIG=$coding_flags")
+        extra_environment+=(ECU=mgu_02_a LD_PRELOAD=/opt/lab-compat/libhmi-bti-compat.so:/usr/lib/libfakecod.so.0:/opt/venus/libvulkan_virtio.so:/opt/venus/angle/libegl-wayland-shim.so LOAD_DEFAULTS=1 "FLAGS_CONFIG=$coding_flags")
         if [[ -f /srv/hmi8-lab/native-mock/enabled ]]; then
             [[ -s /srv/hmi8-lab/native-mock/libnative-mock.so ]]
             expected_hmi=9913ca569bfc78eb2b6174d0660855dc324a7b261667e0b9d20bc9352308062c
@@ -202,9 +206,9 @@ if [[ "$mode" == mesa* ]]; then
             mount --bind /srv/hmi8-lab/native-mock "$root/opt/lab-mock"
             mount -o remount,bind,ro "$root/opt/lab-mock"
             mkdir -p "$profile_state/mock" "$root/run/lab-mock"
+            chown 4010200:4010200 "$profile_state/mock"
             mount --bind "$profile_state/mock" "$root/run/lab-mock"
-            mount -o remount,bind,ro "$root/run/lab-mock"
-            extra_environment+=(LD_PRELOAD=/usr/lib/libfakecod.so.0:/opt/venus/libvulkan_virtio.so:/opt/venus/angle/libegl-wayland-shim.so:/opt/lab-mock/libnative-mock.so)
+            extra_environment+=(LD_PRELOAD=/opt/lab-compat/libhmi-bti-compat.so:/usr/lib/libfakecod.so.0:/opt/venus/libvulkan_virtio.so:/opt/venus/angle/libegl-wayland-shim.so:/opt/lab-mock/libnative-mock.so)
         fi
     fi
     weston_options=(--renderer=pixman)

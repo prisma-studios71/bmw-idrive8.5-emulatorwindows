@@ -13,6 +13,20 @@ STATE = pathlib.Path(os.environ.get('BMW_STATE', '/srv/bmw-idrive85/state'))
 TOOLS = pathlib.Path(os.environ.get('BMW_RUNTIME', '/srv/bmw-idrive85/source/runtime'))
 CONTAINER = os.environ.get('BMW_CONTAINER', 'bmw-idrive85')
 PROFILES = {'g80-m': 'g80lci-m', 'g26': 'g26'}
+PRESETS = {'g80-m': 'full-g80.json', 'g26': 'full-g26.json'}
+
+
+def profile_defaults(name):
+    return json.loads((TOOLS.parent / 'config' / PRESETS[name]).read_text())
+
+
+def complete_profile(name, coding):
+    defaults = profile_defaults(name)
+    completed = dict(coding)
+    if name == 'g80-m':
+        for feature in ('MDRIVE', 'M_VDP'):
+            completed.setdefault(feature, defaults[feature])
+    return completed
 
 
 def write_json(destination, document):
@@ -54,7 +68,15 @@ def main():
         for name in PROFILES:
             destination = saved / f'{name}.json'
             if not destination.exists():
-                write_json(destination, json.loads((TOOLS / 'profiles' / f'{name}.json').read_text()))
+                write_json(destination, profile_defaults(name))
+            else:
+                existing = json.loads(destination.read_text())
+                completed = complete_profile(name, existing)
+                if completed != existing:
+                    backup = destination.with_suffix('.before-m-setup.json')
+                    if not backup.exists():
+                        shutil.copy2(destination, backup)
+                    write_json(destination, completed)
         candidate = saved / f'{selected}.json'
         metadata = Cafd(STATE / 'rootfs/usr/share/sysfunc/coding/cafd_mgu_02_a.bin')
         target_coding = load_coding(metadata, candidate)

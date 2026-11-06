@@ -6,4 +6,5 @@ COPYFILE_DISABLE=1 tar --no-xattrs --exclude='__pycache__' --exclude='*.pyc' -cz
     -C "$ROOT" Dockerfile .dockerignore LICENSE NOTICE runtime container web config scripts tools
 limactl copy "$ROOT/.local/source.tar.gz" "$VM:/tmp/bmw-source.tar.gz"
 limactl shell --workdir=/tmp "$VM" -- sudo tar -xzf /tmp/bmw-source.tar.gz -C /srv/bmw-idrive85/source
+limactl shell --workdir=/tmp "$VM" -- sudo sync
 printf 'Source updated; restart the selected profile to apply changes.\n'

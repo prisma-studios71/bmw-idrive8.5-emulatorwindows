@@ -52,13 +52,18 @@ swfk_0000A6B0 --> Shared BMW interface resources
 swfk_0000A6B1 --> BMW interface resources(non M models)
 swfk_0000A6B2 --> M chassis BMW interface resources
 swfk_0000AED4 --> G26 i4 graphics
-swfk_0000AED4 --> G80 M3 graphics
+swfk_0000A691 --> G80 M3 graphics
 
 ```
 
 - Apple Silicon Mac, macOS **26.0 or newer**
   It uses the Metal 4 API, which has been introduced in macOS 26.
 - Tested on a M1 Pro, macOS 26.7.1, Lima 2.1.4, Krunkit 1.3.2. 
+- Also tested on M5 Pro, macOS 26.7.2, using the Hmi8 BTI compatibility library
+  described below. Other Apple Silicon models are not yet verified.
+- M5 Pro validation covered a fresh source checkout, empty VM, firmware import,
+  downloaded graphics assets, a tools image built from source, G26 menu/touch,
+  and a full VM shutdown/start. Host Homebrew prerequisites were already installed.
 - At least 4 GiB available guest RAM recommended, 16 GiB total host RAM recommended.
 - At least 25 GiB of free disk space before installation (enforced by the installer).
 - Homebrew, Python 3.11+, SSH
@@ -67,7 +72,7 @@ swfk_0000AED4 --> G80 M3 graphics
 Install missing prerequisites yourself, after reviewing their upstream sources:
 
 ```sh
-brew install lima python vulkan-loader libepoxy spirv-tools
+brew install lima python vulkan-loader libepoxy spirv-tools molten-vk
 brew install libkrun/krun/krunkit
 ```
 
@@ -92,8 +97,10 @@ bash install.sh                       # or: bash install.sh /path/to/copyofshare
 
 It installs the Homebrew tools, downloads and verifies the open-source graphics
 pieces, creates the VM, verifies and imports your BMW files, starts the HMI,
-waits until it is on screen and opens http://localhost:5011. Takes about roughly 5 minutes. Running it again skips
-finished steps. Afterwards just use `bash start.sh` (G26) or `bash start.sh g80-m` (G80).
+waits until it is on screen and opens http://localhost:5011. Allow 10–20 minutes
+for a first installation, depending on downloads and image building. Running it
+again skips finished steps. Afterwards use `bash start.sh g26` (G26),
+`bash start.sh g80-m` (G80), or `bash start.sh` to resume the current profile.
 
 **C. From a prepared private bundle** (`private/runtime.tar.gz`, made from your
 own files; never share it):
@@ -125,6 +132,32 @@ directory without backing up coding and mock values. To update UI/source
 without reimporting firmware, use `bash scripts/sync_source.sh`, then restart
 the selected profile.
 
+To follow native HMI touch/input logs live (the log name is shared by the G26
+and G80 profiles; individual events depend on the HMI's logging verbosity):
+
+```sh
+limactl shell bmw-idrive85 -- sudo tail -n 50 -F /srv/bmw-idrive85/state/logs/mesa-g26.hmi-dlt.txt | grep --line-buffered -Ei 'hmitouch|hmiinput|touch.*event|onTouch'
+```
+
+`mesa-g26.touch.txt` contains touch-bridge startup and diagnostic output, not a
+record of every touch.
+
+## Migrating to another Mac
+
+Keep the existing VM and firmware imports. If Homebrew was copied from another
+Mac, rerun `bash install.sh` to restore the explicit host dependencies, including
+MoltenVK. Use `bash start.sh` rather than a direct `limactl restart`: the project
+requires its bundled host graphics driver. `start.sh` detects a running VM using
+the system driver and restarts it with the project driver.
+
+On BTI-capable CPUs, the legacy Hmi8 binary can exit with SIGILL (code 132) at a
+PLT entry that lacks a BTI landing instruction despite the binary advertising
+BTI support. A preload compatibility library removes BTI enforcement only from
+Hmi8's executable mappings in memory; it does not change the firmware files,
+disable PAC, or disable BTI for other libraries or processes. It is inactive on
+CPUs without BTI. After updating these sources, run `bash scripts/sync_source.sh`
+and `bash start.sh` to rebuild and load the compatibility library in the VM.
+
 ## Presets given
 
 - `barestock`: only developer menu, sport displays and km units coded; everything else
@@ -143,6 +176,20 @@ Use `start.sh` to switch complete profiles and preserve outgoing coding.
 
 Mock features are display-state simulations, not actual Bluetooth/audio/HVAC (for now).
 Navigation, AR camera, ConnectedDrive and other full vehicle services are not provided (for now).
+
+### G80 M Setup mocks
+
+Open **Menu → Driving settings → SETUP** in the native HMI. There is no separate
+M Setup app tile. `MDRIVE=enabled` exposes the entry; `M_VDP=3_values` also exposes
+the chassis row. `start.sh g80-m` fills these missing flags in older saved G80
+profiles, keeping a `g80-m.before-m-setup.json` backup. Explicitly configured
+values, including `disabled`, are preserved.
+
+The experimental mock covers engine, chassis, steering, brake and M xDrive
+selections. Native touch changes and the M Setup controls at
+`http://localhost:5012/mocks` share per-profile saved values and survive an HMI
+restart. This does not implement M1/M2 configuration, traction-control telemetry,
+drivetrain services or vehicle control.
 
 If you want one more model to be added, hit me up a request in **Issue**.
 

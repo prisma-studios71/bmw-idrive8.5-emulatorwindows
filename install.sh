@@ -31,11 +31,11 @@ ok "$(sw_vers -productName) $(sw_vers -productVersion), $(sysctl -n machdep.cpu.
 say 'Installing tools (Homebrew)'
 # Always "brew install": no-op when present, and marks each formula as wanted so
 # Homebrew's automatic cleanup never removes it (the Mac GPU driver links against them).
-formulas=(lima vulkan-loader libepoxy spirv-tools)
+formulas=(lima vulkan-loader libepoxy spirv-tools molten-vk)
 command -v krunkit >/dev/null || formulas+=(libkrun/krun/krunkit)
 python3 -c 'import sys; sys.exit(sys.version_info < (3, 11))' 2>/dev/null || formulas+=(python@3.13)
 HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_UPGRADE=1 brew install --quiet "${formulas[@]}" 2>&1 | grep -v 'already installed' || true
-for formula in lima vulkan-loader libepoxy spirv-tools; do
+for formula in lima vulkan-loader libepoxy spirv-tools molten-vk; do
     brew list --formula "$formula" >/dev/null 2>&1 || fail "Homebrew could not install $formula."
 done
 command -v krunkit >/dev/null || fail 'Homebrew could not install krunkit.'

@@ -19,14 +19,33 @@ done
 python3 "$ROOT/tools/boot_splash.py" start "$ROOT" "$VIEWER_PORT" --vm "$VM"
 trap 'python3 "$ROOT/tools/boot_splash.py" status "$ROOT" "$VIEWER_PORT" "Startup failed. Check the terminal output and .local/tunnel.log."' ERR
 if [[ "${BMW_OPEN_BROWSER:-1}" != 0 ]]; then open "http://localhost:$VIEWER_PORT" 2>/dev/null || true; fi
+if [[ "$(limactl list --format '{{.Status}}' "$VM")" == Running ]]; then
+    vm_directory="$(limactl list --format '{{.Dir}}' "$VM")"
+    krunkit_pid="$(cat "$vm_directory/krunkit.pid" 2>/dev/null || true)"
+    loaded_libraries=''
+    if [[ "$krunkit_pid" =~ ^[0-9]+$ ]]; then
+        loaded_libraries="$(lsof -a -p "$krunkit_pid" -d txt -Fn 2>/dev/null || true)"
+    fi
+    project_driver="$(python3 -c 'import pathlib, sys; print(pathlib.Path(sys.argv[1]).resolve())' \
+        "$ROOT/private/host-runtime/libvirglrenderer.1.dylib")"
+    if ! grep -Fxq "n$project_driver" <<< "$loaded_libraries"; then
+        python3 "$ROOT/tools/boot_splash.py" status "$ROOT" "$VIEWER_PORT" 'Restarting the VM with the project GPU driver…'
+        printf 'Restarting VM to load the project GPU driver instead of the system driver.\n'
+        limactl shell --workdir=/tmp "$VM" -- sudo sync
+        limactl stop "$VM"
+    fi
+fi
 if [[ "$(limactl list --format '{{.Status}}' "$VM")" != Running ]]; then lima_start "$VM" --tty=false; fi
 limactl shell --workdir=/tmp "$VM" -- true
-if ! limactl shell --workdir=/tmp "$VM" -- grep -qw console=hvc0 /proc/cmdline; then
+if ! limactl shell --workdir=/tmp "$VM" -- sh -c 'grep -qw console=hvc0 /proc/cmdline && grep -qw systemd.show_status=1 /proc/cmdline && ! grep -qw quiet /proc/cmdline'; then
     python3 "$ROOT/tools/boot_splash.py" status "$ROOT" "$VIEWER_PORT" 'Enabling the Linux serial boot console (one-time VM restart)…'
-    limactl shell --workdir=/tmp "$VM" -- sudo grubby --update-kernel=ALL --args='console=hvc0 loglevel=6'
+    limactl shell --workdir=/tmp "$VM" -- sudo python3 /srv/bmw-idrive85/source/container/mock_state.py configure-boot
+    limactl shell --workdir=/tmp "$VM" -- sudo sync
     limactl stop "$VM"
     lima_start "$VM" --tty=false
 fi
+limactl shell --workdir=/tmp "$VM" -- sudo dmesg --color=never > "$ROOT/.local/linux-dmesg.log.tmp"
+mv "$ROOT/.local/linux-dmesg.log.tmp" "$ROOT/.local/linux-dmesg.log"
 python3 "$ROOT/tools/boot_splash.py" status "$ROOT" "$VIEWER_PORT" 'Fedora is ready. Preparing BMW HMI…'
 limactl shell --workdir=/tmp "$VM" -- sudo env "BMW_TOOLS_IMAGE=${BMW_TOOLS_IMAGE:-$(cat "$ROOT/.local/tools-image-id" 2>/dev/null || echo sha256:d7d89513b9fa8c2631b6ebfbdcf60fa3a38af605ab995440330f4820e10e58e1)}" \
     bash /srv/bmw-idrive85/source/scripts/run_guest.sh "$profile"

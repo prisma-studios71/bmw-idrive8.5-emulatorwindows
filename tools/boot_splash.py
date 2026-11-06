@@ -2,11 +2,13 @@ import argparse
 import http.server
 import json
 import pathlib
-import re
 import subprocess
 import sys
 import time
 import urllib.request
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / 'container'))
+from mock_state import boot_console
 
 
 def main():
@@ -72,17 +74,7 @@ def main():
                 return
             if self.path == '/api/boot':
                 document = json.loads(status.read_text())
-                document['console'] = ''
-                serial = pathlib.Path.home() / '.lima' / options.vm / 'serial.log'
-                if serial.is_file() and serial.stat().st_mtime_ns >= document['started_ns']:
-                    with serial.open('rb') as stream:
-                        stream.seek(max(0, serial.stat().st_size - 131072))
-                        text = stream.read(131072).decode('utf-8', errors='replace')
-                    text = re.sub(r'\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)', '', text)
-                    text = re.sub(r'\x1bP.*?\x1b\\', '', text, flags=re.S)
-                    text = re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]|\x1b.', '', text)
-                    text = re.sub(r'[\x00-\x08\x0b-\x1f\x7f]', '', text)
-                    document['console'] = '\n'.join(text.splitlines()[-100:])
+                document['console'] = boot_console(options.root, options.vm, document['started_ns'])
                 payload, content_type = json.dumps(document).encode(), 'application/json'
             elif self.path == '/':
                 original = (options.root / 'web/index.html').read_text().replace(

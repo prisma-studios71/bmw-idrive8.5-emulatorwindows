@@ -8,4 +8,7 @@ if [[ -f "$ROOT/.local/tunnel.pid" ]]; then
     previous="$(cat "$ROOT/.local/tunnel.pid")"
     if [[ "$previous" =~ ^[0-9]+$ ]] && ps -p "$previous" -o args= | grep -Fq "lima-$VM"; then kill "$previous"; fi
 fi
-if [[ "${1:-}" == --vm ]]; then limactl stop "$VM"; fi
+if [[ "${1:-}" == --vm ]]; then
+    limactl shell --workdir=/tmp "$VM" -- sudo sync
+    limactl stop "$VM"
+fi

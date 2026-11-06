@@ -18,6 +18,7 @@
   "M_MODUS": "3_values",
   "M_DSC": "3_values",
   "M_MOTOR": "3_values",
+  "M_VDP": "3_values",
   "M_EPS": "2_values",
   "M_BRAKE": "2_values",
   "M_GETRIEBE": "3_values",

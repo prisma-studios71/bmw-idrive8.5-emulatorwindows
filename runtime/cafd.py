@@ -41,6 +41,8 @@ MEANINGS = {
     'TYPE_OF_FUEL': 'Powertrain fuel category. Does not change the supplied meshes, control units or drivetrain simulation.',
     'TYPE_OF_CONSTRUCTION': 'Body-style category used by HMI feature selection.',
     'M_DRIVELOGIC': 'M Drivelogic feature availability. Requires compatible M UI assets and drivetrain services.',
+    'MDRIVE': 'Enables the M driving setup entry under Driving settings. M_MENU and BMW M branding alone do not expose this entry.',
+    'M_VDP': 'M chassis setup availability. The G80 mock uses 3_values for Comfort, Sport and Sport Plus; coding does not supply real suspension control.',
 }
 
 

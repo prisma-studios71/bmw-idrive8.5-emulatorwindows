@@ -198,7 +198,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if request.path == '/':
             self.respond(200, (WEB / ('settings.html' if settings else 'index.html')).read_bytes(), 'text/html; charset=utf-8')
         elif request.path == '/mocks' and settings:
-            self.respond(200, (WEB / 'mocks.html').read_bytes(), 'text/html; charset=utf-8')
+            self.respond(200, mock_state.page(WEB / 'mocks.html'), 'text/html; charset=utf-8')
         elif request.path == '/api/mock' and settings:
             try:
                 with runtime.config_lock:
