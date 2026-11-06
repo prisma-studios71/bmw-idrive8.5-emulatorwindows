@@ -60,10 +60,8 @@ swfk_0000A691 --> G80 M3 graphics
   It uses the Metal 4 API, which has been introduced in macOS 26.
 - Tested on a M1 Pro, macOS 26.7.1, Lima 2.1.4, Krunkit 1.3.2. 
 - Also tested on M5 Pro, macOS 26.7.2, using the Hmi8 BTI compatibility library
-  described below. Other Apple Silicon models are not yet verified.
-- M5 Pro validation covered a fresh source checkout, empty VM, firmware import,
-  downloaded graphics assets, a tools image built from source, G26 menu/touch,
-  and a full VM shutdown/start. Host Homebrew prerequisites were already installed.
+  described below.
+  Other Apple Silicon models are not yet verified.
 - At least 4 GiB available guest RAM recommended, 16 GiB total host RAM recommended.
 - At least 25 GiB of free disk space before installation (enforced by the installer).
 - Homebrew, Python 3.11+, SSH
