@@ -177,25 +177,8 @@ Use `start.sh` to switch complete profiles and preserve outgoing coding.
 Mock features are display-state simulations, not actual Bluetooth/audio/HVAC (for now).
 Navigation, AR camera, ConnectedDrive and other full vehicle services are not provided (for now).
 
-### G80 M Setup mocks
-
-Open **Menu → Driving settings → SETUP** in the native HMI. There is no separate
-M Setup app tile. `MDRIVE=enabled` exposes the entry; `M_VDP=3_values` also exposes
-the chassis row. `start.sh g80-m` fills these missing flags in older saved G80
-profiles, keeping a `g80-m.before-m-setup.json` backup. Explicitly configured
-values, including `disabled`, are preserved.
-
-The experimental mock covers engine, chassis, steering, brake and M xDrive
-selections. Native touch changes and the M Setup controls at
-`http://localhost:5012/mocks` share per-profile saved values and survive an HMI
-restart. This does not implement M1/M2 configuration, traction-control telemetry,
-drivetrain services or vehicle control.
-
 If you want one more model to be added, hit me up a request in **Issue**.
 
-```sh
-limactl shell --workdir=/srv/bmw-idrive85/source bmw-idrive85 -- sudo docker build -t bmw-idrive85-tools:local .
-BMW_TOOLS_IMAGE=bmw-idrive85-tools:local bash start.sh g80-m
-```
+
 
 ### Credits go to BMW AG, BMW Car IT GmbH, DENSO Corporation, Snapdragon and other Companies. This is a research experiment, it is not meant for redistribution, at all.
