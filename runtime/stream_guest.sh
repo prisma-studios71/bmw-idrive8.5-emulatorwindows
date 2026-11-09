@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-process="$(pgrep -f '^/opt/lab-ubuntu/lib/ld-linux-aarch64.so.1.* /opt/ivi/rootfs/usr/bin/Hmi8' | head -n 1)"
+process="$(pgrep -f '^(\S*qemu\S* (\S+ )?)?/opt/lab-ubuntu/lib/ld-linux-aarch64.so.1.* /opt/ivi/rootfs/usr/bin/Hmi8' | head -n 1)"
 if [[ -z "$process" ]]; then
     printf 'Hmi8 is not running. Start the window session first.\n' >&2
     exit 1
