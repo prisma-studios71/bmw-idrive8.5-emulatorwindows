@@ -11,7 +11,7 @@ if [[ "${HMI_GPU_BACKEND:-venus}" == software ]]; then
     # Mesa lavapipe (CPU Vulkan) for ANGLE; library path rewritten for the firmware chroot.
     python3 - <<'PY'
 import glob, json, pathlib
-manifest = sorted(glob.glob('/usr/share/vulkan/icd.d/lvp_icd.*.json'))
+manifest = sorted(glob.glob('/usr/share/vulkan/icd.d/lvp_icd*.json'))
 if not manifest:
     raise SystemExit('lavapipe (mesa-vulkan-drivers) is missing from the tools image')
 document = json.loads(pathlib.Path(manifest[0]).read_text())

@@ -3,10 +3,25 @@
 Experimental. The emulator runs on Windows 10 (2004+) and Windows 11 using WSL2 and
 Docker, with the same firmware runtime, coding page and mocks as the Mac version.
 
-> **Status:** the guest-side pieces (software rendering path, touch shim, ARM64
-> emulation under qemu-user) were validated in Linux test environments. The full
-> flow has not yet been confirmed on real Windows hardware. Please report results
-> (CPU, Windows build, x64/ARM64, how long boot took) in an Issue.
+> **Status:** not yet confirmed end-to-end with BMW firmware on real Windows
+> hardware. Please report results (CPU, Windows build, x64/ARM64, how long boot
+> took) in an Issue.
+>
+> Validated on x86-64 Linux with Ubuntu 24.04 `qemu-user-static` (the same
+> emulation the x64 Windows path uses), without firmware:
+> - the ARM64 tools image builds under emulation (about 12 minutes);
+> - every `entrypoint.sh` build step (BTI compat, touch shim, native mock,
+>   controller bridge, stream encoder) and the lavapipe ICD;
+> - the bundled ANGLE renders through lavapipe inside a chroot, loaded exactly as
+>   the launcher loads it for Hmi8 (`GL_RENDERER=ANGLE (Mesa, Vulkan 1.4.318
+>   (llvmpipe ...))`, OpenGL ES 3.1);
+> - touch end to end: JSON input → `touch_guest.py` → shim socket → a
+>   `python-evdev` reader with the shim preloaded (capabilities, absinfo,
+>   properties, clock selection, events);
+> - `run_guest.sh` container creation, labels and recreation on port changes.
+>
+> Not testable without firmware: Hmi8 itself on lavapipe (it needs GLES 3.1 or
+> lower and must accept the shim's touchscreen), boot time and frame rate.
 
 ## How it works
 

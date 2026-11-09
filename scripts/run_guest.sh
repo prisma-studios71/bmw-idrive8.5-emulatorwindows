@@ -14,7 +14,7 @@ test -f "$base/state/config/coding.json"
 case "$gpu_backend" in
     venus) test -c /dev/dri/renderD128
            gpu_environment=(-e VK_DRIVER_FILES=/opt/venus/venus.json -e MESA_LOADER_DRIVER_OVERRIDE=zink -e GALLIUM_DRIVER=zink) ;;
-    software) gpu_environment=(-e LP_NUM_THREADS="${BMW_RENDER_THREADS:-$(nproc)}") ;;
+    software) gpu_environment=(-e VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.json -e LP_NUM_THREADS="${BMW_RENDER_THREADS:-$(nproc)}") ;;
     *) printf 'Unknown BMW_GPU_BACKEND: %s\n' "$gpu_backend" >&2; exit 2 ;;
 esac
 case "$touch_backend" in

@@ -92,7 +92,7 @@ else
     # Written by entrypoint.sh: the Ubuntu lavapipe ICD, with its library path as seen inside the chroot.
     test -s /srv/hmi8-lab/compat/lvp_icd.json
     vulkan_icd=/opt/lab-compat/lvp_icd.json
-    weston_vulkan_icd="$(ls /usr/share/vulkan/icd.d/lvp_icd.*.json | head -n 1)"
+    weston_vulkan_icd="$(ls /usr/share/vulkan/icd.d/lvp_icd*.json | head -n 1)"
     vulkan_preload=
 fi
 mount --bind /sys "$root/sys"
