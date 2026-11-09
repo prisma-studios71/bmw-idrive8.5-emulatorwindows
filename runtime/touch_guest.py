@@ -6,13 +6,15 @@ import subprocess
 import sys
 
 from evdev import AbsInfo, ecodes
-from input_device import ContainerUInput
 
 
 root = pathlib.Path(sys.argv[1])
 width, height = map(int, sys.argv[2:4])
+backend = sys.argv[4] if len(sys.argv) > 4 else 'uinput'
 if width < 2 or height < 2:
     raise ValueError('Touch geometry must be at least 2×2')
+if backend not in ('uinput', 'shim'):
+    raise ValueError('Touch backend must be uinput or shim')
 capabilities = {
     ecodes.EV_KEY: [ecodes.BTN_TOUCH, ecodes.BTN_TOOL_FINGER],
     ecodes.EV_ABS: [
@@ -26,10 +28,19 @@ capabilities = {
         (ecodes.ABS_MT_PRESSURE, AbsInfo(0, 0, 255, 0, 0, 0)),
     ],
 }
-with ContainerUInput(capabilities, name='Hmi8 laboratory touchscreen',
-            input_props=[ecodes.INPUT_PROP_DIRECT]) as device:
-    os.chmod(device.device.path, 0o644)
-    (root / 'run/lab-touch-device').write_text(device.device.path)
+if backend == 'uinput':
+    from input_device import ContainerUInput
+    device_context = ContainerUInput(capabilities, name='Hmi8 laboratory touchscreen',
+                                     input_props=[ecodes.INPUT_PROP_DIRECT])
+else:
+    from socket_touch import SocketTouch
+    device_context = SocketTouch(root / 'run/lab-evdev.sock')
+with device_context as device:
+    if backend == 'uinput':
+        os.chmod(device.device.path, 0o644)
+        (root / 'run/lab-touch-device').write_text(device.device.path)
+    else:
+        (root / 'run/lab-touch-device').write_text('shim:' + str(device.path))
     server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     server.bind(str(root / 'run/lab-touch.sock'))
     server.listen(1)
@@ -47,7 +58,7 @@ with ContainerUInput(capabilities, name='Hmi8 laboratory touchscreen',
             device.syn()
             active = False
 
-    print(f'Touch device: {device.device.path}, range {width}×{height}', flush=True)
+    print(f'Touch device ({backend}): {device.device.path if backend == "uinput" else device.path}, range {width}×{height}', flush=True)
     while True:
         connection, _ = server.accept()
         try:

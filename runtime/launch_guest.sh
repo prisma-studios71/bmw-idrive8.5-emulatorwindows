@@ -5,6 +5,12 @@ case "$mode" in
     baseline|help|mesa|mesa-services|mesa-g26) ;;
     *) printf 'Unknown launch mode: %s\n' "$mode" >&2; exit 2 ;;
 esac
+# venus: host GPU through virtio-gpu (Mac/krunkit). software: Mesa lavapipe on the CPU (Windows/WSL2).
+export HMI_GPU_BACKEND="${HMI_GPU_BACKEND:-venus}"
+# uinput: kernel virtual touchscreen. shim: userspace evdev emulation (no evdev or qemu-user).
+export HMI_TOUCH_BACKEND="${HMI_TOUCH_BACKEND:-uinput}"
+case "$HMI_GPU_BACKEND" in venus|software) ;; *) printf 'Unknown HMI_GPU_BACKEND: %s\n' "$HMI_GPU_BACKEND" >&2; exit 2 ;; esac
+case "$HMI_TOUCH_BACKEND" in uinput|shim) ;; *) printf 'Unknown HMI_TOUCH_BACKEND: %s\n' "$HMI_TOUCH_BACKEND" >&2; exit 2 ;; esac
 root=/srv/hmi8-lab/rootfs
 logs=/mnt/hmi8-lab/logs
 width=1920
@@ -72,10 +78,23 @@ for device in null zero random urandom; do
     touch "$root/dev/$device"
     mount --bind "/dev/$device" "$root/dev/$device"
 done
-test -c /dev/dri/renderD128
-gpu_group="$(stat -c %g /dev/dri/renderD128)"
-mkdir -p "$root/dev/dri" "$root/sys" "$root/opt/venus"
-mount --bind /dev/dri "$root/dev/dri"
+mkdir -p "$root/sys" "$root/opt/venus"
+if [[ "$HMI_GPU_BACKEND" == venus ]]; then
+    test -c /dev/dri/renderD128
+    gpu_group="$(stat -c %g /dev/dri/renderD128)"
+    mkdir -p "$root/dev/dri"
+    mount --bind /dev/dri "$root/dev/dri"
+    vulkan_icd=/opt/venus/venus.json
+    weston_vulkan_icd=/opt/venus/venus.json
+    vulkan_preload=/opt/venus/libvulkan_virtio.so:
+else
+    gpu_group=4010200
+    # Written by entrypoint.sh: the Ubuntu lavapipe ICD, with its library path as seen inside the chroot.
+    test -s /srv/hmi8-lab/compat/lvp_icd.json
+    vulkan_icd=/opt/lab-compat/lvp_icd.json
+    weston_vulkan_icd="$(ls /usr/share/vulkan/icd.d/lvp_icd.*.json | head -n 1)"
+    vulkan_preload=
+fi
 mount --bind /sys "$root/sys"
 mount -o remount,bind,ro "$root/sys"
 mount --bind /opt/venus "$root/opt/venus"
@@ -93,7 +112,7 @@ chown 4010200:4010200 "$root/run/wayland" "$root/var/opt/public/hmi"
 chmod 700 "$root/run/wayland" "$root/var/opt/public/hmi"
 ip link set lo up
 if [[ "$mode" == mesa-g26 ]]; then
-    python3 /mnt/hmi8-lab/touch_guest.py "$root" "$width" "$height" > "$logs/$mode.touch.txt" 2>&1 &
+    python3 /mnt/hmi8-lab/touch_guest.py "$root" "$width" "$height" "$HMI_TOUCH_BACKEND" > "$logs/$mode.touch.txt" 2>&1 &
     touch_pid=$!
     for attempt in $(seq 1 50); do
         if [[ -f "$root/run/lab-touch-device" ]]; then break; fi
@@ -101,13 +120,15 @@ if [[ "$mode" == mesa-g26 ]]; then
         sleep 0.1
     done
     [[ -f "$root/run/lab-touch-device" ]]
-    touch_device="$(cat "$root/run/lab-touch-device")"
-    udevadm settle --timeout=5 || true
-    chown 4010200:4010200 "$touch_device"
-    chmod 660 "$touch_device"
     mkdir -p "$root/dev/input"
     touch "$root/dev/input/cid-touchscreen"
-    mount --bind "$touch_device" "$root/dev/input/cid-touchscreen"
+    if [[ "$HMI_TOUCH_BACKEND" == uinput ]]; then
+        touch_device="$(cat "$root/run/lab-touch-device")"
+        udevadm settle --timeout=5 || true
+        chown 4010200:4010200 "$touch_device"
+        chmod 660 "$touch_device"
+        mount --bind "$touch_device" "$root/dev/input/cid-touchscreen"
+    fi
     # Packages are found by SGBM ID, whatever release version was imported.
     resource_dir() { ls -d /srv/hmi8-lab/resources/swfk_0000"$1"_* 2>/dev/null | sort -V | tail -n 1; }
     for resource in a6b1:hmi-data/bmw a6b0:hmi-data/bmw-shared aed4:hmi-vehicles/G26BEV; do
@@ -194,10 +215,15 @@ if [[ "$mode" == mesa* ]]; then
     ln -sfn /opt/lab-ubuntu/lib/libgbm.so.1 "$root/opt/lab-overrides/libgbm.so"
     library_path="/opt/venus/angle:/opt/venus:/opt/lab-overrides:/opt/lab-ubuntu/lib:$library_path"
     launcher=(/opt/lab-ubuntu/lib/ld-linux-aarch64.so.1 --library-path "$library_path" /opt/ivi/rootfs/usr/bin/Hmi8)
-    extra_environment=(XDG_SESSION_TYPE=wayland ANGLE_DEFAULT_PLATFORM=vulkan ANGLE_FEATURE_OVERRIDES_DISABLED=supportsIncrementalPresent VK_DRIVER_FILES=/opt/venus/venus.json LIBGL_DRIVERS_PATH=/opt/lab-ubuntu/lib/dri __EGL_VENDOR_LIBRARY_FILENAMES=/opt/lab-ubuntu/glvnd/egl_vendor.d/50_mesa.json GCONV_PATH=/opt/lab-ubuntu/lib/gconv)
+    extra_environment=(XDG_SESSION_TYPE=wayland ANGLE_DEFAULT_PLATFORM=vulkan ANGLE_FEATURE_OVERRIDES_DISABLED=supportsIncrementalPresent "VK_DRIVER_FILES=$vulkan_icd" LIBGL_DRIVERS_PATH=/opt/lab-ubuntu/lib/dri __EGL_VENDOR_LIBRARY_FILENAMES=/opt/lab-ubuntu/glvnd/egl_vendor.d/50_mesa.json GCONV_PATH=/opt/lab-ubuntu/lib/gconv)
     extra_environment+=(LD_PRELOAD=/opt/lab-compat/libhmi-bti-compat.so)
     if [[ "$mode" == mesa-g26 ]]; then
-        extra_environment+=(ECU=mgu_02_a LD_PRELOAD=/opt/lab-compat/libhmi-bti-compat.so:/usr/lib/libfakecod.so.0:/opt/venus/libvulkan_virtio.so:/opt/venus/angle/libegl-wayland-shim.so LOAD_DEFAULTS=1 "FLAGS_CONFIG=$coding_flags")
+        touch_preload=
+        if [[ "$HMI_TOUCH_BACKEND" == shim ]]; then
+            touch_preload=:/opt/lab-compat/libevdev-touch-shim.so
+            extra_environment+=(LAB_EVDEV_DEVICE=/dev/input/cid-touchscreen LAB_EVDEV_SOCKET=/run/lab-evdev.sock "LAB_EVDEV_SIZE=${width}x${height}")
+        fi
+        extra_environment+=(ECU=mgu_02_a "LD_PRELOAD=/opt/lab-compat/libhmi-bti-compat.so:/usr/lib/libfakecod.so.0:${vulkan_preload}/opt/venus/angle/libegl-wayland-shim.so$touch_preload" LOAD_DEFAULTS=1 "FLAGS_CONFIG=$coding_flags")
         if [[ -f /srv/hmi8-lab/native-mock/enabled ]]; then
             [[ -s /srv/hmi8-lab/native-mock/libnative-mock.so ]]
             expected_hmi=9913ca569bfc78eb2b6174d0660855dc324a7b261667e0b9d20bc9352308062c
@@ -208,7 +234,7 @@ if [[ "$mode" == mesa* ]]; then
             mkdir -p "$profile_state/mock" "$root/run/lab-mock"
             chown 4010200:4010200 "$profile_state/mock"
             mount --bind "$profile_state/mock" "$root/run/lab-mock"
-            extra_environment+=(LD_PRELOAD=/opt/lab-compat/libhmi-bti-compat.so:/usr/lib/libfakecod.so.0:/opt/venus/libvulkan_virtio.so:/opt/venus/angle/libegl-wayland-shim.so:/opt/lab-mock/libnative-mock.so)
+            extra_environment+=("LD_PRELOAD=/opt/lab-compat/libhmi-bti-compat.so:/usr/lib/libfakecod.so.0:${vulkan_preload}/opt/venus/angle/libegl-wayland-shim.so$touch_preload:/opt/lab-mock/libnative-mock.so")
         fi
     fi
     weston_options=(--renderer=pixman)
@@ -216,7 +242,7 @@ if [[ "$mode" == mesa* ]]; then
         weston_options=(--renderer=pixman --debug --modules=/srv/hmi8-lab/controller-bridge/lab-ivi-controller.so)
     fi
     setpriv --reuid=4010200 --regid=4010200 --groups="$gpu_group" \
-        env XDG_RUNTIME_DIR="$root/run/wayland" LIBGL_ALWAYS_SOFTWARE=0 GALLIUM_DRIVER=zink MESA_LOADER_DRIVER_OVERRIDE=zink VK_DRIVER_FILES=/opt/venus/venus.json LD_LIBRARY_PATH=/opt/venus \
+        env XDG_RUNTIME_DIR="$root/run/wayland" LIBGL_ALWAYS_SOFTWARE=0 GALLIUM_DRIVER=zink MESA_LOADER_DRIVER_OVERRIDE=zink VK_DRIVER_FILES="$weston_vulkan_icd" LD_LIBRARY_PATH=/opt/venus \
         weston --backend=headless "${weston_options[@]}" --shell=ivi-shell.so \
         --socket=wayland-0 --width="$width" --height="$height" --idle-time=0 --no-config \
         > "$logs/$mode.weston.txt" 2>&1 &

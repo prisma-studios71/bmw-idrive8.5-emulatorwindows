@@ -1,6 +1,13 @@
 # BMW IDrive 8.5 Emulator
 
-## WARNING: It will only work on a Mac with M Chips, macOS 26+.
+## WARNING: The main version only works on a Mac with M Chips, macOS 26+.
+
+### Windows (experimental)
+
+Windows 10/11 (x64 or ARM64) is supported through WSL2 + Docker with CPU (software)
+rendering: put your BMW files into `bmw-files\`, then double-click `install-windows.cmd`.
+Windows on ARM runs the firmware natively; Intel/AMD PCs emulate ARM64 and are much slower.
+Full guide: [`docs/WINDOWS.md`](docs/WINDOWS.md).
 
 
 ### A standalone IDrive8.5 Emulator which runs on ARM linux based VM locally on a Mac. No connection to anything else.
